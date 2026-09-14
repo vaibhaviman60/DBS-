@@ -1,0 +1,299 @@
+{% extends "base.html" %}
+{% block title %}Onboarding{% endblock %}
+
+{% block head_extra %}
+<style>
+  :root{
+    --brand:#6F4A6F;
+    --brand-dark:#59395A;
+    --brand-soft:#F5EDF5;
+    --contrast:#D9A24B;
+    --ink:#2B2230;
+    --bg:#FAF7F9;
+    --border:#E4D9E4;
+    --muted:#8A7A8A;
+  }
+  .ob-wrap{display:grid;grid-template-columns:260px 1fr 260px;min-height:calc(100vh - 60px);background:var(--bg);}
+  .ob-sidebar{background:#fff;border-right:1px solid var(--border);padding:28px 22px;}
+  .ob-brandmark{display:flex;align-items:center;gap:8px;font-size:20px;font-weight:800;color:var(--brand);}
+  .ob-brandmark .dot{width:24px;height:24px;border-radius:50%;border:3px solid var(--brand);border-right-color:var(--contrast);display:inline-block;}
+  .ob-progress-title{font-size:11.5px;font-weight:700;color:var(--muted);letter-spacing:.6px;margin:24px 0 16px;}
+  .ob-step{display:flex;align-items:center;gap:10px;padding:11px 10px;border-radius:10px;font-size:13.5px;color:var(--muted);margin-bottom:2px;}
+  .ob-step .num{width:24px;height:24px;border-radius:50%;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;font-weight:700;}
+  .ob-step.done .num{background:var(--brand);border-color:var(--brand);color:#fff;}
+  .ob-step.done{color:var(--ink);}
+  .ob-step.current{background:var(--brand-soft);color:var(--brand);font-weight:700;}
+  .ob-step.current .num{background:var(--brand);border-color:var(--brand);color:#fff;}
+  .ob-bot{margin-top:26px;background:var(--brand-soft);border-radius:14px;padding:18px;text-align:center;}
+  .ob-bot .emoji{width:54px;height:54px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-size:24px;}
+  .ob-bot h5{font-size:13.5px;margin:0 0 6px;}
+  .ob-bot p{font-size:12px;color:var(--muted);line-height:1.5;margin:0;}
+
+  .ob-main{padding:30px 40px;overflow:auto;}
+  .ob-topbar{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:26px;}
+  .ob-step-label{font-size:12.5px;color:var(--muted);margin-bottom:4px;}
+  .ob-title{font-size:24px;font-weight:800;margin:0;color:var(--ink);}
+  .ob-progress-bar{width:260px;height:7px;border-radius:6px;background:var(--border);overflow:hidden;margin-top:10px;}
+  .ob-progress-bar .fill{height:100%;background:var(--brand);border-radius:6px;transition:width .25s ease;}
+  .ob-progress-pct{font-size:12px;color:var(--muted);margin-top:4px;text-align:right;}
+
+  .ob-question{font-size:19px;font-weight:700;margin-bottom:6px;color:var(--ink);}
+  .ob-sub{font-size:13.5px;color:var(--muted);margin-bottom:22px;}
+  .ob-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .ob-card{border:1.5px solid var(--border);border-radius:14px;padding:18px;display:flex;gap:14px;align-items:flex-start;background:#fff;cursor:pointer;transition:.15s;}
+  .ob-card:hover{border-color:var(--brand);}
+  .ob-card.selected{border-color:var(--brand);background:var(--brand-soft);}
+  .ob-card .ic{width:38px;height:38px;border-radius:10px;background:var(--brand-soft);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:17px;}
+  .ob-card.selected .ic{background:#fff;}
+  .ob-card h5{font-size:14.5px;margin:0 0 3px;color:var(--ink);}
+  .ob-card p{font-size:12px;color:var(--muted);line-height:1.4;margin:0;}
+  .ob-check{margin-left:auto;width:20px;height:20px;border-radius:5px;border:1.5px solid var(--border);flex-shrink:0;position:relative;}
+  .ob-card.selected .ob-check{background:var(--brand);border-color:var(--brand);}
+  .ob-card.selected .ob-check::after{content:"✓";color:#fff;font-size:12px;position:absolute;inset:0;display:flex;align-items:center;justify-content:center;}
+
+  .ob-footer{display:flex;justify-content:space-between;margin-top:34px;}
+  .ob-side-tips{padding:28px 22px;}
+  .tip-box{background:#fff;border:1px solid var(--border);border-radius:14px;padding:18px;}
+  .tip-box h5{margin:0 0 10px;font-size:13.5px;color:var(--ink);}
+  .tip-box p{font-size:12.5px;color:var(--muted);line-height:1.5;margin:0;}
+  .tip-list{margin:16px 0 0;padding:0;list-style:none;}
+  .tip-list li{font-size:12px;color:var(--muted);padding:6px 0;padding-left:16px;position:relative;line-height:1.4;}
+  .tip-list li::before{content:"•";position:absolute;left:0;color:var(--brand);}
+
+  .ob-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 22px;border-radius:10px;font-size:14.5px;font-weight:600;border:1px solid transparent;cursor:pointer;transition:.15s;}
+  .ob-btn-primary{background:var(--brand);color:#fff;}
+  .ob-btn-primary:hover{background:var(--brand-dark);}
+  .ob-btn-outline{background:#fff;color:var(--brand);border-color:var(--border);}
+  .ob-btn-outline:hover{border-color:var(--brand);}
+  .ob-btn-sm{padding:8px 14px;font-size:13px;border-radius:8px;}
+
+  @media(max-width:900px){
+    .ob-wrap{grid-template-columns:1fr;}
+    .ob-sidebar,.ob-side-tips{display:none;}
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ob-wrap">
+
+  <!-- LEFT: progress sidebar -->
+  <div class="ob-sidebar">
+    <div class="ob-brandmark"><span class="dot"></span>Jodoo</div>
+    <div class="ob-progress-title">ONBOARDING PROGRESS</div>
+    <div id="ob-step-list"></div>
+    <div class="ob-bot">
+      <div class="emoji">🤖</div>
+      <h5>We personalize everything</h5>
+      <p>Our AI will use your answers to build the perfect workspace for your business.</p>
+    </div>
+  </div>
+
+  <!-- CENTER: current question -->
+  <div class="ob-main">
+    <div class="ob-topbar">
+      <div>
+        <div class="ob-step-label" id="ob-step-label">Step 1 of 8</div>
+        <h2 class="ob-title" id="ob-title">Business Basics</h2>
+        <div class="ob-progress-bar"><div class="fill" id="ob-fill" style="width:12%;"></div></div>
+        <div class="ob-progress-pct" id="ob-pct">12%</div>
+      </div>
+      <button type="button" class="ob-btn ob-btn-outline ob-btn-sm" id="ob-save-exit">💾 Save & Exit</button>
+    </div>
+
+    <div style="margin-top:10px;">
+      <div class="ob-question" id="ob-question">What type of business do you run?</div>
+      <div class="ob-sub" id="ob-sub">This helps us understand your business and suggest the right tools.</div>
+      <div class="ob-grid" id="ob-grid"></div>
+    </div>
+
+    <div class="ob-footer">
+      <button type="button" class="ob-btn ob-btn-outline" id="ob-back-btn">← Back</button>
+      <button type="button" class="ob-btn ob-btn-primary" id="ob-next-btn">Next →</button>
+    </div>
+  </div>
+
+  <!-- RIGHT: contextual tip -->
+  <div class="ob-side-tips">
+    <div class="tip-box">
+      <h5>💡 Why we ask this</h5>
+      <p id="ob-why">Your answers help Jodoo recommend the right modules, dashboards, and automations for your business.</p>
+      <ul class="tip-list">
+        <li>You can always update this later</li>
+        <li>Selecting more options helps us personalize better</li>
+        <li>Answer honestly for the best experience</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- hidden form that actually submits answers to Flask on Finish -->
+<form id="ob-submit-form" method="POST" action="{{ url_for('questionnaire') }}" style="display:none;">
+  <input type="hidden" name="answers_json" id="ob-answers-json">
+</form>
+
+<script>
+const obSteps = [
+  {
+    label:"Business Basics", q:"What type of business do you run?", sub:"This helps us understand your business and suggest the right tools.",
+    why:"Your answers help Jodoo recommend the right modules, dashboards, and automations for your business.",
+    options:[
+      ["🏬","Retail Store","e.g. Clothing, electronics, grocery"],
+      ["🍽","Restaurant / Cafe","e.g. Food, bakery, cloud kitchen"],
+      ["🏭","Manufacturing","e.g. Factory, production, assembly"],
+      ["📣","Marketing Agency","e.g. Digital agency, creative agency"],
+    ], multi:false, sel:[0]
+  },
+  {
+    label:"Business Operations", q:"Which of the following best describes how you operate?", sub:"Select all that apply to your business.",
+    why:"This helps Jodoo recommend the right modules, automations, and dashboards for your operations.",
+    options:[
+      ["📦","Sell physical products","You sell tangible items to customers"],
+      ["🛒","Maintain inventory","You keep track of stock and manage inventory"],
+      ["💻","Sell online","You sell products or services through online channels"],
+      ["📋","Provide services","You deliver services to your customers"],
+    ], multi:true, sel:[0,1,2]
+  },
+  {
+    label:"Customers & Sales", q:"How do your customers typically find and contact you?", sub:"Select all that apply.",
+    why:"This helps us enable the right sales and customer management tools and automations for your business.",
+    options:[
+      ["🏪","Walk-ins / In-person","Customers visit your store or office"],
+      ["📞","Phone","Customers call you directly"],
+      ["🌐","Website","Customers contact you through your website"],
+      ["💬","WhatsApp","Customers message you on WhatsApp"],
+    ], multi:true, sel:[0,1,2,3]
+  },
+  {
+    label:"Team", q:"How many people are involved in your business?", sub:"This helps us tailor collaboration & permissions.",
+    why:"Team size helps Jodoo configure the right roles, permissions, and collaboration tools.",
+    options:[
+      ["🧍","Just me","Solo operator"],
+      ["👥","2 – 20 people","Small team"],
+      ["🏢","21 – 50 people","Growing team"],
+      ["🏙","50+ people","Larger organization"],
+    ], multi:false, sel:[0]
+  },
+  {
+    label:"Finance", q:"How do you manage your finances?", sub:"Select the option that fits best.",
+    why:"This helps Jodoo suggest the right accounting and invoicing setup.",
+    options:[
+      ["📊","Manual (Excel / Paper)","Tracked manually today"],
+      ["💻","Accounting Software","Using tools like Tally, Zoho, etc."],
+      ["🏦","Banking Apps","Managed mostly via banking apps"],
+      ["❓","Other","Something else not listed"],
+    ], multi:false, sel:[0]
+  },
+  {
+    label:"Goals", q:"What are your top business goals?", sub:"Select all that apply.",
+    why:"Goals help Jodoo prioritize the right widgets and AI recommendations for your dashboard.",
+    options:[
+      ["📈","Increase Sales","Grow revenue and order volume"],
+      ["⚡","Improve Efficiency","Streamline day-to-day operations"],
+      ["🧭","Expand Business","Open new locations or channels"],
+      ["🤝","Better Customer Service","Improve response & satisfaction"],
+    ], multi:true, sel:[0,1,3]
+  },
+  {
+    label:"Preferences", q:"What's your preferred workspace experience?", sub:"Choose one.",
+    why:"This tunes the complexity of your dashboard and default views.",
+    options:[
+      ["🌤","Simple & Easy","Clean and minimal, only essentials"],
+      ["🛠","Advanced & Customizable","Full control over every widget"],
+      ["⚖️","A balance of both","Simple by default, advanced on demand"],
+    ], multi:false, sel:[0]
+  },
+  {
+    label:"Review & Confirm", q:"You're all set! We'll use your answers to build your perfect workspace.", sub:"Review your answers, then finish to continue.",
+    why:"Once confirmed, we'll take you to the data upload step next.",
+    options:[
+      ["✅","Ready to go","Click Finish to continue to data upload"],
+    ], multi:false, sel:[0], review:true
+  }
+];
+let obIndex = 0;
+
+function renderObSideList(){
+  const wrap = document.getElementById('ob-step-list');
+  wrap.innerHTML = obSteps.map((s,i)=>{
+    const cls = i<obIndex ? 'done' : (i===obIndex ? 'current' : '');
+    const mark = i<obIndex ? '✓' : (i+1);
+    return `<div class="ob-step ${cls}"><span class="num">${mark}</span>${s.label}</div>`;
+  }).join('');
+}
+
+function renderObStep(){
+  const s = obSteps[obIndex];
+  document.getElementById('ob-step-label').textContent = `Step ${obIndex+1} of ${obSteps.length}`;
+  document.getElementById('ob-title').textContent = s.label;
+  document.getElementById('ob-question').textContent = s.q;
+  document.getElementById('ob-sub').textContent = s.sub;
+  document.getElementById('ob-why').textContent = s.why;
+  const pct = Math.round(((obIndex+1)/obSteps.length)*100);
+  document.getElementById('ob-fill').style.width = pct+'%';
+  document.getElementById('ob-pct').textContent = pct+'%';
+
+  document.getElementById('ob-grid').innerHTML = s.options.map((o,i)=>{
+    const selected = s.sel.includes(i) ? 'selected' : '';
+    return `<div class="ob-card ${selected}" data-idx="${i}">
+      <div class="ic">${o[0]}</div>
+      <div><h5>${o[1]}</h5><p>${o[2]}</p></div>
+      <div class="ob-check"></div>
+    </div>`;
+  }).join('');
+
+  document.querySelectorAll('.ob-card').forEach(card=>{
+    card.addEventListener('click', ()=> toggleObOption(parseInt(card.dataset.idx,10)));
+  });
+
+  document.getElementById('ob-next-btn').textContent = (obIndex===obSteps.length-1) ? 'Finish & Continue ✓' : 'Next →';
+  document.getElementById('ob-back-btn').disabled = (obIndex===0);
+  renderObSideList();
+}
+
+function toggleObOption(i){
+  const s = obSteps[obIndex];
+  if(s.review) return;
+  if(s.multi){
+    const pos = s.sel.indexOf(i);
+    if(pos>-1) s.sel.splice(pos,1); else s.sel.push(i);
+  } else {
+    s.sel = [i];
+  }
+  renderObStep();
+}
+
+function collectAnswers(){
+  return obSteps.slice(0, obSteps.length-1).map(s=>({
+    step: s.label,
+    question: s.q,
+    selected: s.sel.map(i=>s.options[i][1])
+  }));
+}
+
+function submitAnswers(){
+  document.getElementById('ob-answers-json').value = JSON.stringify(collectAnswers());
+  document.getElementById('ob-submit-form').submit();
+}
+
+document.getElementById('ob-next-btn').addEventListener('click', ()=>{
+  if(obIndex===obSteps.length-1){
+    submitAnswers();
+    return;
+  }
+  obIndex = Math.min(obSteps.length-1, obIndex+1);
+  renderObStep();
+});
+
+document.getElementById('ob-back-btn').addEventListener('click', ()=>{
+  obIndex = Math.max(0, obIndex-1);
+  renderObStep();
+});
+
+document.getElementById('ob-save-exit').addEventListener('click', ()=>{
+  submitAnswers();
+});
+
+renderObStep();
+</script>
+{% endblock %}
