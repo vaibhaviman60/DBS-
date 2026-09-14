@@ -1,0 +1,11 @@
+customer_id,company_name,industry_segment,city,contract_type,credit_limit,current_balance,payment_terms_days,account_status,signup_date,account_manager
+C0001,TechCorp India,Technology,Mumbai,B2B,500000,120000,30,Active,2024-01-15,E004
+C0002,Mumbai Supermarkets,Retail,Mumbai,B2B,300000,85000,15,Active,2024-02-20,E008
+C0003,Delhi Bakeries Co,Food & Beverage,Delhi,B2B,250000,0,30,Active,2024-03-10,E006
+C0004,Bangalore Hotels,Hospitality,Bangalore,B2B,600000,220000,45,Active,2024-04-05,E006
+C0005,Chennai Cafe Chain,Food & Beverage,Chennai,B2B,150000,30000,15,Active,2024-05-12,E004
+C0006,Hyderabad Restaurants,Food & Beverage,Hyderabad,B2B,400000,95000,30,Active,2024-06-18,E008
+C0007,Pune Logistics,Logistics,Pune,B2B,200000,50000,30,Active,2024-07-22,E006
+C0008,Kolkata Trading Co,Retail,Kolkata,B2B,280000,72000,20,Active,2024-08-30,E004
+C0009,Jaipur Events,Events & Catering,Jaipur,B2B,180000,0,45,Active,2024-09-14,E008
+C0010,Ahmedabad Stores,Retail,Ahmedabad,B2B,220000,55000,15,Active,2024-10-25,E006

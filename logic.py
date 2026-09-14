@@ -1,202 +1,140 @@
-"""
-Business Logic Layer — Jodo operational dashboard system
-Tasks T042, T043, T044: Stock status classification, alert extraction, and dashboard KPIs
+import pandas as pd
+from data_loader import get_inventory, get_purchase_orders
 
-Phase 1-3 uses this with mock data; Phase 4+ calls Odoo XML-RPC for live data.
-"""
-
-from datetime import datetime
-
-
-def get_status(item):
+def get_status(row):
     """
-    Classify the stock status of a single product based on qty vs min_qty.
-    
-    Task T042: Stock Status Classifier
+    Determine stock status by comparing current_stock to safety_stock and reorder_point.
     
     Args:
-        item (dict): Product record with 'qty' (current_stock) and 'min_qty' (reorder_point) keys
-        
-    Returns:
-        str: One of 'ok', 'low', 'critical', or 'out'
-        
-    Example:
-        >>> get_status({'qty': 5, 'min_qty': 20})
-        'critical'
-        >>> get_status({'qty': 100, 'min_qty': 20})
-        'ok'
-    """
-    qty = item.get("qty") or item.get("current_stock", 0)
-    min_qty = item.get("min_qty") or item.get("reorder_point", 0)
+        row: a pandas Series (single inventory row)
     
-    if qty <= 0:
-        return "out"
-    elif qty < min_qty:
-        return "critical"
-    elif qty < min_qty * 1.2:
-        return "low"
+    Returns:
+        str: 'out' (0 stock), 'critical' (< safety), 'low' (< reorder), 'ok' (healthy)
+    """
+    current_stock = row.get('current_stock', 0)
+    safety_stock = row.get('safety_stock', 0)
+    reorder_point = row.get('reorder_point', 0)
+    
+    if current_stock == 0:
+        return 'out'
+    elif current_stock < safety_stock:
+        return 'critical'
+    elif current_stock < reorder_point:
+        return 'low'
     else:
-        return "ok"
+        return 'ok'
 
-
-def get_alerts(stock):
+def reorder_priority_score(inventory_row, purchase_orders_df):
     """
-    Extract and sort products below their minimum threshold by urgency.
+    Calculate reorder priority score using the exact formula:
     
-    Task T043: Alert Extractor & Sorter
+    score = (stock_deficit_ratio × 0.5) + (outgoing_pressure_ratio × 0.3) + (delivery_urgency_ratio × 0.2)
     
     Args:
-        stock (list): List of product dicts with 'qty', 'min_qty', 'product', 'sku' keys
-        
+        inventory_row: pandas Series (single inventory item)
+        purchase_orders_df: DataFrame of all purchase orders
+    
     Returns:
-        list: Sorted list of alert dicts (highest urgency first), each containing:
-              - product: product name
-              - sku: SKU identifier
-              - qty: current quantity
-              - min_qty: minimum threshold
-              - status: one of 'critical', 'out', 'low'
-              - urgency: percentage (0–100) indicating how critical the shortage is
-              
-    Urgency calculation:
-        urgency = ((min_qty - qty) / min_qty) × 100
-        - 0% = just barely below minimum
-        - 100% = completely out of stock
-        
-    Example:
-        >>> alerts = get_alerts([
-        ...     {'sku': 'S1', 'product': 'Item A', 'qty': 5, 'min_qty': 20},
-        ...     {'sku': 'S2', 'product': 'Item B', 'qty': 100, 'min_qty': 50}
-        ... ])
-        >>> len(alerts)
-        1
-        >>> alerts[0]['urgency']
-        75.0
+        dict: {
+            'score': float (0–1),
+            'classification': str ('Urgent', 'Soon', or 'Monitor')
+        }
     """
-    alerts = []
+    current_stock = inventory_row.get('current_stock', 0)
+    reorder_point = inventory_row.get('reorder_point', 1)
+    lead_time_days = inventory_row.get('lead_time_days', 1)
+    sku_id = inventory_row.get('product_id')  # or sku_id, depending on your CSV column name
     
-    for item in stock:
-        # Normalize field names (support both "qty"/"current_stock" and "min_qty"/"reorder_point")
-        qty = item.get("qty") or item.get("current_stock", 0)
-        min_qty = item.get("min_qty") or item.get("reorder_point", 0)
+    # 1. Stock Deficit Ratio
+    # If current_stock >= reorder_point, this is 0 (no deficit).
+    # If current_stock < reorder_point, this is (1 - current/reorder), clamped to 0–1.
+    stock_deficit_ratio = max(0, 1 - (current_stock / reorder_point)) if reorder_point > 0 else 0
+    
+    # 2. Outgoing Pressure Ratio
+    # Count open/pending POs for this product. Divide by max POs across all products.
+    if purchase_orders_df is not None and len(purchase_orders_df) > 0:
+        # Filter for this product and open/pending status
+        open_pos = purchase_orders_df[
+            (purchase_orders_df['product_id'] == sku_id) &
+            (purchase_orders_df['status'].isin(['open', 'pending', 'Open', 'Pending']))
+        ]
+        open_po_count = len(open_pos)
         
-        # Only include items below minimum threshold
-        if qty < min_qty:
-            # Avoid division by zero
-            if min_qty > 0:
-                urgency = ((min_qty - qty) / min_qty) * 100
-            else:
-                urgency = 0.0
-            
-            alert = {
-                "product": item.get("product") or item.get("product_name", "Unknown"),
-                "sku": item.get("sku") or item.get("sku_id", "Unknown"),
-                "qty": qty,
-                "min_qty": min_qty,
-                "status": get_status(item),
-                "urgency": round(urgency, 2),
-            }
-            alerts.append(alert)
-    
-    # Sort by urgency descending (highest percentage first = most urgent)
-    alerts.sort(key=lambda x: x["urgency"], reverse=True)
-    
-    return alerts
-
-
-def compute_stats(stock, transfers):
-    """
-    Compute dashboard KPI stats from stock and transfer data.
-    
-    Task T044: Dashboard KPI Calculator
-    
-    Args:
-        stock (list): List of product dicts with 'sku'/'sku_id', 'qty'/'current_stock', 
-                     and 'min_qty'/'reorder_point' keys
-        transfers (list): List of transfer dicts with 'state' and 'due' keys
+        # Find the maximum number of open POs for any single product
+        max_pos_per_product = purchase_orders_df[
+            purchase_orders_df['status'].isin(['open', 'pending', 'Open', 'Pending'])
+        ].groupby('product_id').size().max() or 1
         
-    Returns:
-        dict: KPI stats with keys:
-              - total_skus: count of unique SKUs in stock
-              - pending: count of transfers in 'draft' or 'waiting' state
-              - due_today: count of transfers due today
-              - alerts: count of products with qty < min_qty
-              - critical: count of products with qty <= 0 (out of stock)
-              
-    Example:
-        >>> stats = compute_stats(
-        ...     stock=[
-        ...         {'sku': 'S1', 'qty': 5, 'min_qty': 20},    # alert
-        ...         {'sku': 'S2', 'qty': 0, 'min_qty': 10},     # critical
-        ...         {'sku': 'S3', 'qty': 100, 'min_qty': 50}    # ok
-        ...     ],
-        ...     transfers=[
-        ...         {'state': 'draft', 'due': '2026-09-04'},
-        ...         {'state': 'done', 'due': '2026-09-04'}
-        ...     ]
-        ... )
-        >>> stats['total_skus']
-        3
-        >>> stats['alerts']
-        1
-        >>> stats['critical']
-        1
-    """
-    today = datetime.now().strftime("%Y-%m-%d")
+        outgoing_pressure_ratio = open_po_count / max_pos_per_product if max_pos_per_product > 0 else 0
+    else:
+        outgoing_pressure_ratio = 0
     
-    # ========== Count unique SKUs ==========
-    skus = set()
-    for item in stock:
-        sku = item.get("sku") or item.get("sku_id")
-        if sku:
-            skus.add(sku)
-    total_skus = len(skus)
+    # 3. Delivery Urgency Ratio
+    # Shorter lead time = higher urgency (inverse relationship).
+    delivery_urgency_ratio = 1 / max(lead_time_days, 1)
     
-    # ========== Count alerts (qty < min_qty) ==========
-    alerts_count = 0
-    for item in stock:
-        qty = item.get("qty") or item.get("current_stock", 0)
-        min_qty = item.get("min_qty") or item.get("reorder_point", 0)
-        if qty < min_qty:
-            alerts_count += 1
+    # Clamp urgency to 0–1 range
+    delivery_urgency_ratio = min(1, delivery_urgency_ratio)
     
-    # ========== Count critical (qty <= 0) ==========
-    critical_count = 0
-    for item in stock:
-        qty = item.get("qty") or item.get("current_stock", 0)
-        if qty <= 0:
-            critical_count += 1
+    # Final Score
+    score = (
+        (stock_deficit_ratio * 0.5) +
+        (outgoing_pressure_ratio * 0.3) +
+        (delivery_urgency_ratio * 0.2)
+    )
     
-    # ========== Count pending transfers (draft or waiting state) ==========
-    pending_count = 0
-    for transfer in transfers:
-        state = transfer.get("state", "").lower()
-        if state in ["draft", "waiting"]:
-            pending_count += 1
-    
-    # ========== Count transfers due today ==========
-    due_today_count = 0
-    for transfer in transfers:
-        due_date_str = transfer.get("due")
-        if due_date_str:
-            try:
-                # Handle both string and date formats
-                if isinstance(due_date_str, str):
-                    # Try ISO format first (YYYY-MM-DD)
-                    due_date = datetime.strptime(due_date_str, "%Y-%m-%d").strftime("%Y-%m-%d")
-                else:
-                    # If it's already a date object, convert to string
-                    due_date = due_date_str.strftime("%Y-%m-%d")
-                
-                if due_date == today:
-                    due_today_count += 1
-            except (ValueError, TypeError, AttributeError):
-                # Skip entries that can't be parsed
-                pass
+    # Classify
+    if score > 0.7:
+        classification = 'Urgent'
+    elif score >= 0.4:
+        classification = 'Soon'
+    else:
+        classification = 'Monitor'
     
     return {
-        "total_skus": total_skus,
-        "pending": pending_count,
-        "due_today": due_today_count,
-        "alerts": alerts_count,
-        "critical": critical_count,
+        'score': round(score, 2),
+        'classification': classification
     }
+
+def get_alerts():
+    """
+    Return all inventory items where current_stock < reorder_point,
+    each enriched with reorder score and classification.
+    Sorted by score descending (most urgent first).
+    
+    Returns:
+        list of dicts, each with inventory row data + score + classification
+    """
+    inventory_df = get_inventory()
+    purchase_orders_df = get_purchase_orders()
+    
+    if inventory_df is None or len(inventory_df) == 0:
+        return []
+    
+    # Find all items below reorder point
+    alerts = inventory_df[
+        inventory_df['current_stock'] < inventory_df['reorder_point']
+    ].copy()
+    
+    if len(alerts) == 0:
+        return []
+    
+    # Add score and classification to each alert
+    alerts['status'] = alerts.apply(get_status, axis=1)
+    alerts['reorder_data'] = alerts.apply(
+        lambda row: reorder_priority_score(row, purchase_orders_df),
+        axis=1
+    )
+    
+    # Extract score and classification into separate columns
+    alerts['score'] = alerts['reorder_data'].apply(lambda x: x['score'])
+    alerts['classification'] = alerts['reorder_data'].apply(lambda x: x['classification'])
+    
+    # Drop the helper column
+    alerts = alerts.drop('reorder_data', axis=1)
+    
+    # Sort by score descending
+    alerts = alerts.sort_values('score', ascending=False)
+    
+    # Convert to list of dicts for JSON serialization
+    return alerts.to_dict('records')

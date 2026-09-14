@@ -1,0 +1,11 @@
+po_id,po_date,supplier_id,supplier_name,warehouse_id,product_id,product_name,quantity_ordered,quantity_received,expected_delivery_date,actual_delivery_date,status,unit_cost
+PO001,2025-12-01,S001,Cacao Traders Ltd.,W01,P001,Sourdough Loaf,50,50,2025-12-03,2025-12-02,Delivered,120.5
+PO002,2025-12-01,S001,Cacao Traders Ltd.,W01,P002,Baguette,60,60,2025-12-02,2025-12-02,Delivered,85.0
+PO003,2025-12-02,S002,Golden Valley Dairy,W02,P003,Whole Wheat Loaf,45,0,2025-12-04,,Open,130.0
+PO004,2025-12-02,S001,Cacao Traders Ltd.,W01,P004,Croissant,40,0,2025-12-03,,Open,70.0
+PO005,2025-11-28,S003,Karnataka Wheat Mills,W03,P005,Pain au Chocolat,70,70,2025-11-30,2025-11-30,Delivered,90.0
+PO006,2025-12-01,S001,Cacao Traders Ltd.,W01,P006,Cinnamon Roll,50,0,2025-12-02,,Pending,95.0
+PO007,2025-12-02,S002,Golden Valley Dairy,W02,P007,Blueberry Muffin,55,0,2025-12-03,,Open,65.0
+PO008,2025-11-30,S001,Cacao Traders Ltd.,W01,P008,Chocolate Chip Cookie,80,80,2025-12-01,2025-12-01,Delivered,40.0
+PO009,2025-12-01,S002,Golden Valley Dairy,W03,P009,Oatmeal Raisin Cookie,25,0,2025-12-02,,Open,40.0
+PO010,2025-11-29,S001,Cacao Traders Ltd.,W01,P010,Birthday Cake,20,20,2025-12-01,2025-12-01,Delivered,950.0

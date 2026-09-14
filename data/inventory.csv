@@ -1,0 +1,19 @@
+product_id,product_name,category,warehouse_id,warehouse_name,current_stock,safety_stock,reorder_point,unit_cost,supplier_id,lead_time_days,last_restock_date,stockout_flag,obsolete_flag
+P001,Sourdough Loaf,Bread,W01,Mumbai Central,38,15,30,120.5,S001,2,2025-11-18,0,0
+P002,Baguette,Bread,W01,Mumbai Central,41,18,32,85.0,S001,1,2025-11-18,0,0
+P003,Whole Wheat Loaf,Bread,W02,Delhi North,44,20,35,130.0,S002,2,2025-11-18,0,0
+P004,Croissant,Pastry,W01,Mumbai Central,37,14,29,70.0,S001,1,2025-11-18,0,0
+P005,Pain au Chocolat,Pastry,W03,Bangalore South,73,25,58,90.0,S003,2,2025-11-18,0,0
+P006,Cinnamon Roll,Pastry,W01,Mumbai Central,42,16,33,95.0,S001,1,2025-11-18,0,0
+P007,Blueberry Muffin,Pastry,W02,Delhi North,64,22,51,65.0,S001,1,2025-11-18,0,0
+P008,Chocolate Chip Cookie,Cookie,W01,Mumbai Central,75,26,60,40.0,S001,1,2025-11-18,0,0
+P009,Oatmeal Raisin Cookie,Cookie,W03,Bangalore South,22,8,17,40.0,S002,1,2025-11-18,0,0
+P010,Birthday Cake,Cake,W01,Mumbai Central,17,6,13,950.0,S001,2,2025-11-18,0,0
+P011,Cupcake,Cake,W02,Delhi North,67,23,53,80.0,S001,2,2025-11-18,0,0
+P012,Bagel Plain,Bread,W02,Delhi North,44,16,35,55.0,S002,1,2025-11-18,0,0
+P013,Bagel Everything,Bread,W03,Bangalore South,49,18,39,60.0,S002,2,2025-11-18,0,0
+P014,Rye Loaf,Bread,W01,Mumbai Central,41,15,32,135.0,S002,2,2025-11-18,0,0
+P015,Scone Blueberry,Pastry,W02,Delhi North,19,7,15,75.0,S002,1,2025-11-18,0,0
+P016,Flour 25kg,Ingredient,W01,Mumbai Central,9,3,7,1800.0,S003,2,2025-03-02,1,0
+P017,Butter Block,Ingredient,W02,Delhi North,15,5,12,520.0,S001,8,2025-11-18,0,0
+P018,Cocoa Powder 5kg,Ingredient,W03,Bangalore South,34,12,27,2300.0,S001,5,2025-11-18,0,0

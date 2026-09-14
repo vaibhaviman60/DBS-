@@ -1,0 +1,6 @@
+supplier_id,supplier_name,category_supplied,avg_lead_time_days,reliability_score,price_volatility_index,active_flag
+S001,Cacao Traders Ltd.,Bakery Supplies,2,4.8,0.12,1
+S002,Golden Valley Dairy Co.,Dairy & Grains,2,4.6,0.18,1
+S003,Karnataka Wheat Mills,Flour & Grains,3,4.4,0.22,1
+S004,Premium Chocolate House,Specialty Items,5,4.2,0.35,1
+S005,Local Organic Farms,Produce,1,3.8,0.45,0

@@ -1,0 +1,10 @@
+employee_id,name,role,department,warehouse_id,warehouse_name,hire_date,termination_date,annual_salary_inr,safety_incidents,performance_rating,status
+E001,Fatima Sheikh,Head Baker,Production,W01,Mumbai Central,2021-03-01,,1920000,0,4.6,Active
+E002,Suresh Bhat,Baker,Production,W01,Mumbai Central,2022-06-15,,1560000,1,4.2,Active
+E003,Anjali Verma,Pastry Chef,Production,W02,Delhi North,2022-09-01,,1620000,0,4.5,Active
+E004,Vikas Kumar,Counter Staff,Sales,W01,Mumbai Central,2023-01-10,,1080000,0,3.9,Active
+E005,Ritika Das,Counter Staff,Sales,W02,Delhi North,2023-04-20,2025-06-14,1080000,2,2.8,Terminated
+E006,Neha Joshi,Counter Staff,Sales,W03,Bangalore South,2025-07-01,,1080000,0,4.0,Active
+E007,Imran Khan,Delivery Manager,Logistics,W01,Mumbai Central,2023-08-05,,1200000,1,4.1,Active
+E008,Gowri Krishnan,Cashier,Finance,W02,Delhi North,2024-02-12,,1050000,0,3.7,Active
+E009,Priyanka Menon,Owner/Manager,Management,W01,Mumbai Central,2020-11-01,,0,0,5.0,Active

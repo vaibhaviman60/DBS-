@@ -1,107 +1,210 @@
-// static/script.js
+// ===================== INITIALIZATION =====================
 
-document.addEventListener("DOMContentLoaded", function() {
-  function getCookie(name) {
-    const v = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
-    return v ? v.pop() : '';
-  }
-
-  const grid = document.getElementById("dashboard-grid");
-  const layoutEl = document.getElementById("layout-json");
-  let layout = layoutEl ? JSON.parse(layoutEl.textContent) : null;
-
-  async function loadCurrentLayoutFromAPI() {
-    try {
-      const res = await fetch("/api/dashboard/layouts/current");
-      if (res.ok) {
-        const j = await res.json();
-        return j.layout_json || null;
-      }
-    } catch (e) { console.warn("Couldn't fetch current layout", e); }
-    return null;
-  }
-
-  async function renderPanels(panels) {
-    if (!grid) return;
-    grid.innerHTML = "";
-    (panels || []).forEach(p => {
-      const el = document.createElement("div");
-      el.className = "panel";
-      el.dataset.panelId = p.id;
-      el.innerHTML = `<h3>${p.id}</h3><div class="panel-body">Loading...</div>`;
-      grid.appendChild(el);
-      fetch(`/api/panels/${p.id}`).then(r => r.json()).then(j => {
-        el.querySelector(".panel-body").textContent = JSON.stringify(j.data || j);
-      }).catch(e => {
-        el.querySelector(".panel-body").textContent = "Error loading";
-      });
-    });
-  }
-
-  (async function init() {
-    if (!layout) layout = await loadCurrentLayoutFromAPI();
-    if (!layout) layout = { panels: [ {id: "kpi_strip"}, {id:"stock_alerts"} ] };
-    await renderPanels(layout.panels);
-
-    if (typeof Sortable !== "undefined" && grid) {
-      Sortable.create(grid, { animation: 150 });
-    }
-  })();
-
-  document.getElementById("open-customize")?.addEventListener("click", () => {
-    document.getElementById("modal-backdrop")?.classList.add("show");
-  });
-  document.getElementById("close-customize")?.addEventListener("click", () => {
-    document.getElementById("modal-backdrop")?.classList.remove("show");
-  });
-
-  document.querySelectorAll("#save-layout").forEach(btn => {
-    btn.addEventListener("click", async () => {
-      if (!grid) return;
-      const panels = Array.from(grid.children).map((child, idx) => ({
-        id: child.dataset.panelId,
-        position: { x: 0, y: idx, w: 1, h: 1 }
-      }));
-      const payload = { layout_json: { panels: panels }, version: layout.version || 1 };
-      const csrf = getCookie("csrf_token");
-      const layoutId = document.getElementById("layout-json")?.dataset?.layoutId || null;
-      try {
-        let res;
-        if (layoutId) {
-          res = await fetch(`/api/dashboard/layouts/${layoutId}`, {
-            method: "PUT",
-            headers: {
-              "Content-Type": "application/json",
-              "X-CSRF-Token": csrf
-            },
-            body: JSON.stringify({ layout_json: payload.layout_json, version: payload.version })
-          });
-        } else {
-          res = await fetch(`/api/dashboard/layouts`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "X-CSRF-Token": csrf
-            },
-            body: JSON.stringify(payload)
-          });
-        }
-        if (res.status === 200 || res.status === 201) {
-          alert("Layout saved");
-          const j = await res.json();
-          layout = { panels: panels, version: j.version || (layout.version||1) + 1 };
-          document.getElementById("modal-backdrop")?.classList.remove("show");
-        } else if (res.status === 409) {
-          const j = await res.json();
-          alert("Conflict: layout changed on server. Reload to get current version.");
-        } else {
-          const txt = await res.text();
-          alert("Save failed: " + txt);
-        }
-      } catch (e) {
-        alert("Save error: " + e.message);
-      }
-    });
-  });
-
+window.addEventListener('DOMContentLoaded', () => {
+  console.log('[SCRIPT] Page loaded, initializing dashboard...');
+  
+  // Render navigation sidebar
+  renderSidebar();
+  
+  // Fetch and render all dashboard data
+  loadKPIs();
+  loadAlerts();
+  loadInventory();
+  
+  console.log('[SCRIPT] Dashboard ready!');
 });
+
+// ===================== SIDEBAR NAV =====================
+
+function renderSidebar() {
+  const navEl = document.getElementById('app-nav');
+  if (!navEl) return;
+  
+  const navItems = [
+    { label: '📊 Dashboard', active: true },
+    { label: '📦 Inventory', active: false },
+    { label: '📋 Purchase Orders', active: false },
+    { label: '🏭 Suppliers', active: false },
+    { label: '👥 Customers', active: false },
+    { label: '👨‍💼 Team', active: false },
+    { label: '📈 Analytics', active: false },
+  ];
+  
+  navEl.innerHTML = navItems.map(item => `
+    <div class="side-nav-item ${item.active ? 'active' : ''}">
+      ${item.label}
+    </div>
+  `).join('');
+}
+
+// ===================== KPI CARDS =====================
+
+function loadKPIs() {
+  console.log('[KPIs] Fetching KPI data from /api/kpis...');
+  
+  fetch('/api/kpis')
+    .then(res => res.json())
+    .then(data => {
+      console.log('[KPIs] Data received:', data);
+      renderKPIs(data);
+    })
+    .catch(err => console.error('[ERROR] Failed to load KPIs:', err));
+}
+
+function renderKPIs(data) {
+  const strip = document.getElementById('kpi-strip');
+  if (!strip) return;
+  
+  const kpis = [
+    {
+      label: 'Current Stock Value',
+      value: '₹' + formatNumber(data.total_stock_value),
+      delta: '↑ In Stock',
+      deltaClass: 'green'
+    },
+    {
+      label: 'Open POs',
+      value: data.open_po_count,
+      delta: 'In Transit',
+      deltaClass: 'amber'
+    },
+    {
+      label: 'Inventory Alerts',
+      value: data.critical_alert_count,
+      delta: `${data.low_alert_count} Low Stock`,
+      deltaClass: 'red'
+    },
+    {
+      label: 'Total Inv. Value',
+      value: '₹' + formatNumber(data.total_inventory_value),
+      delta: 'Replacement Cost',
+      deltaClass: 'blue'
+    }
+  ];
+  
+  strip.innerHTML = kpis.map(kpi => `
+    <div class="card">
+      <div class="label">${kpi.label}</div>
+      <div class="value">${kpi.value}</div>
+      <div class="delta ${kpi.deltaClass}">${kpi.delta}</div>
+    </div>
+  `).join('');
+  
+  // Update quick stats
+  document.getElementById('stat-open-pos').textContent = data.open_po_count;
+  document.getElementById('stat-critical').textContent = data.critical_alert_count;
+  document.getElementById('stat-inventory-value').textContent = '₹' + formatNumber(data.total_stock_value);
+}
+
+// ===================== ALERTS TABLE =====================
+
+function loadAlerts() {
+  console.log('[Alerts] Fetching alerts from /api/alerts...');
+  
+  fetch('/api/alerts')
+    .then(res => res.json())
+    .then(data => {
+      console.log('[Alerts] Data received:', data);
+      renderAlerts(data);
+    })
+    .catch(err => console.error('[ERROR] Failed to load alerts:', err));
+}
+
+function renderAlerts(alerts) {
+  const tbody = document.getElementById('alerts-tbody');
+  if (!tbody) return;
+  
+  if (!alerts || alerts.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted);">✓ No alerts. All stock levels healthy!</td></tr>';
+    return;
+  }
+  
+  tbody.innerHTML = alerts.slice(0, 10).map(alert => {
+    // Get product name and other details
+    const productName = alert.product_name || 'Unknown';
+    const currentStock = alert.current_stock || 0;
+    const reorderPoint = alert.reorder_point || 0;
+    const status = alert.status || 'low';
+    const classification = alert.classification || 'Monitor';
+    const leadTime = alert.lead_time_days || 0;
+    
+    return `
+      <tr>
+        <td><strong>${productName}</strong></td>
+        <td>${currentStock}</td>
+        <td>${reorderPoint}</td>
+        <td><span class="pill ${status}">${status.toUpperCase()}</span></td>
+        <td><strong>${classification}</strong></td>
+        <td>${leadTime} days</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+// ===================== INVENTORY TABLE =====================
+
+function loadInventory() {
+  console.log('[Inventory] Fetching inventory from /api/inventory...');
+  
+  fetch('/api/inventory')
+    .then(res => res.json())
+    .then(data => {
+      console.log('[Inventory] Data received:', data);
+      renderInventory(data);
+    })
+    .catch(err => console.error('[ERROR] Failed to load inventory:', err));
+}
+
+function renderInventory(items) {
+  const tbody = document.getElementById('inventory-tbody');
+  if (!tbody) return;
+  
+  if (!items || items.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted);">No inventory data.</td></tr>';
+    return;
+  }
+  
+  tbody.innerHTML = items.slice(0, 20).map(item => {
+    const productName = item.product_name || 'Unknown';
+    const category = item.category || '-';
+    const currentStock = item.current_stock || 0;
+    const unitCost = item.unit_cost || 0;
+    const stockValue = (currentStock * unitCost).toFixed(2);
+    const status = item.status || 'ok';
+    
+    return `
+      <tr>
+        <td><strong>${productName}</strong></td>
+        <td>${category}</td>
+        <td>${currentStock}</td>
+        <td>₹${unitCost.toFixed(2)}</td>
+        <td>₹${formatNumber(stockValue)}</td>
+        <td><span class="pill ${status}">${status.toUpperCase()}</span></td>
+      </tr>
+    `;
+  }).join('');
+}
+
+// ===================== HELPERS =====================
+
+function formatNumber(num) {
+  return parseFloat(num).toLocaleString('en-IN', { maximumFractionDigits: 0 });
+}
+
+function miniLineChart(vals, color) {
+  const w = 560, h = 150;
+  const max = Math.max(...vals);
+  const min = Math.min(...vals);
+  const pts = vals.map((v, i) => {
+    const x = (i / (vals.length - 1)) * w;
+    const y = h - ((v - min) / (max - min || 1)) * (h - 20) - 10;
+    return x + ',' + y;
+  }).join(' ');
+  const area = `0,${h} ${pts} ${w},${h}`;
+  return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+    <polygon points="${area}" fill="${color}" opacity="0.12"></polygon>
+    <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline>
+  </svg>`;
+}
+
+console.log('[SCRIPT] Script loaded and ready to fetch data from backend');
